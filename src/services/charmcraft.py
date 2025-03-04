@@ -380,7 +380,34 @@ def upload(
         # )
         return fake_upload
     # `charmcraft upload` output: {"revision": <int>}
-    revision = json.loads(sh.charmcraft.upload(path, format="json", _tty_out=False))["revision"]
+    try:
+        output = sh.charmcraft.upload(path, format="json", _tty_out=False)
+    except sh.ErrorReturnCode as e:
+        try:
+            errors = json.loads(e.stdout)["errors"]
+        except (json.JSONDecodeError, KeyError):
+            console.print(e.stderr)
+            raise
+        else:
+            if len(errors) != 1:
+                console.print(e.stderr)
+                raise
+            error = errors[0]
+            if error.get("code") != "review-error":
+                console.print(e.stderr)
+                raise
+            match = re.fullmatch(
+                r".*?Revision of the existing package is: (?P<revision>[0-9]+)",
+                error.get("message", ""),
+            )
+            if not match:
+                console.print(e.stderr)
+                raise
+            revision = int(match.group("revision"))
+            console.print(f"Warning: {path=} already uploaded. Using existing {revision=}")
+    else:
+        revision: int = json.loads(output)["revision"]
+        console.print(f"Uploaded charm {revision=}")
 
     # Upload the resources
     charm_resources = metadata().get("resources", {})  # machine charms have no resources
