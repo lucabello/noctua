@@ -78,8 +78,9 @@ def test_upload(charm_name, path):
                     "blackbox-exporter-image",
                     image="docker://quay.io/prometheus/blackbox-exporter:v0.24.0",
                     format="json",
+                    _tty_out=False,
                 )
-                charmcraft_mock.upload.assert_called_once_with(path, format="json")
+                charmcraft_mock.upload.assert_called_once_with(path, format="json", _tty_out=False)
 
 
 @pytest.mark.parametrize("resources", [(["resA:1", "resB:2"]), (["resA:1", "resB:2"])])
@@ -95,7 +96,11 @@ def test_release(resources: List[str]):
         )
         resources_args = [f"--resource={r}" for r in resources]
         charmcraft_mock.release.assert_called_once_with(
-            charm, *resources_args, channel=channel, revision=revision
+            charm,
+            *resources_args,
+            channel=channel,
+            revision=revision,
+            _tty_out=False,
         )
 
 
@@ -256,6 +261,7 @@ def test_publish_charm_libraries():
                         "publish-lib",
                         "charms.blackbox_exporter_k8s.v0.blackbox_probes",
                         format="json",
+                        _tty_out=False,
                     )
                 ]
             )

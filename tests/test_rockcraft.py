@@ -3,6 +3,7 @@ from typing import Dict, List
 from unittest.mock import MagicMock, patch
 
 import pytest
+import yaml
 
 import services.rockcraft as rockcraft
 import tests.constants as constants
@@ -53,7 +54,7 @@ def test_oci_factory_manifest():
     commit = "abcdef123"
     versions_with_tags = {"1.0.0": ["1.0.0"], "1.0.1": ["1", "1.0", "1.0.1"]}
     end_of_life_date = datetime.now() + timedelta(days=365 / 4)
-    end_of_life = f"{end_of_life_date.strftime("%Y-%m-%d")}T00:00:00Z"
+    end_of_life = f"{end_of_life_date.strftime('%Y-%m-%d')}T00:00:00Z"
 
     expected_manifest = {
         "version": 1,
@@ -76,7 +77,9 @@ def test_oci_factory_manifest():
             },
         ],
     }
-    manifest = rockcraft.oci_factory_manifest(repository, commit, versions_with_tags)
+    manifest: Dict = yaml.safe_load(
+        rockcraft.oci_factory_manifest(repository, commit, versions_with_tags)
+    )
     # Make sure all the uploads point to the same repo and commit
     assert len({x["source"] for x in manifest["upload"]}) == 1  # pyright: ignore
     assert len({x["commit"] for x in manifest["upload"]}) == 1  # pyright: ignore
