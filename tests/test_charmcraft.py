@@ -12,7 +12,7 @@ import tests.constants as constants
 @pytest.mark.parametrize("metadata_file", ["metadata.yaml", "charmcraft.yaml", None])
 def test_metadata(metadata_file):
     if metadata_file:
-        # Patch os.path.exists to retun True only for metadata_file
+        # Patch os.path.exists to return True only for metadata_file
         with patch(
             "os.path.exists",
             MagicMock(side_effect=lambda x: True if x == metadata_file else False),
