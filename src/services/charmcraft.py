@@ -404,10 +404,12 @@ def upload(
                 console.print(e.stderr)
                 raise
             revision = int(match.group("revision"))
-            console.print(f"Warning: {path=} already uploaded. Using existing {revision=}")
+            if not quiet:
+                console.print(f"Warning: {path=} already uploaded. Using existing {revision=}")
     else:
         revision: int = json.loads(output)["revision"]
-        console.print(f"Uploaded charm {revision=}")
+        if not quiet:
+            console.print(f"Uploaded charm {revision=}")
 
     # Upload the resources
     charm_resources = metadata().get("resources", {})  # machine charms have no resources
