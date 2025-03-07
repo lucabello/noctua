@@ -135,7 +135,9 @@ def oci_factory_manifest(
             return super().increase_indent(flow, False)
 
     end_of_life_date = datetime.now() + timedelta(days=365 / 4)  # EOL is 3 months by default
+    end_of_life_patch_date = datetime.now() - timedelta(days=1)  # for patch releases
     end_of_life = f"{end_of_life_date.strftime('%Y-%m-%d')}T00:00:00Z"
+    end_of_life_patch = f"{end_of_life_patch_date.strftime('%Y-%m-%d')}T00:00:00Z"
 
     manifest = {}
     manifest["version"] = 1
@@ -147,8 +149,10 @@ def oci_factory_manifest(
         upload_item["directory"] = version
         upload_item["release"] = {}
         for tag in tags:
+            # for patch tags, we set end-of-life to be "yesterday"
+            is_tag_with_patch = len(tag.split("-")[0].split(".")) == 3
             upload_item["release"][tag] = {
-                "end-of-life": end_of_life,
+                "end-of-life": end_of_life_patch if is_tag_with_patch else end_of_life,
                 "risks": ["stable"],
             }
         manifest["upload"].append(upload_item)

@@ -55,6 +55,8 @@ def test_oci_factory_manifest():
     versions_with_tags = {"1.0.0": ["1.0.0"], "1.0.1": ["1", "1.0", "1.0.1"]}
     end_of_life_date = datetime.now() + timedelta(days=365 / 4)
     end_of_life = f"{end_of_life_date.strftime('%Y-%m-%d')}T00:00:00Z"
+    end_of_life_patch_date = datetime.now() - timedelta(days=1)
+    end_of_life_patch = f"{end_of_life_patch_date.strftime('%Y-%m-%d')}T00:00:00Z"
 
     expected_manifest = {
         "version": 1,
@@ -63,7 +65,7 @@ def test_oci_factory_manifest():
                 "source": "canonical/prometheus-rock",
                 "commit": "abcdef123",
                 "directory": "1.0.0",
-                "release": {"1.0.0": {"end-of-life": end_of_life, "risks": ["stable"]}},
+                "release": {"1.0.0": {"end-of-life": end_of_life_patch, "risks": ["stable"]}},
             },
             {
                 "source": "canonical/prometheus-rock",
@@ -72,7 +74,7 @@ def test_oci_factory_manifest():
                 "release": {
                     "1": {"end-of-life": end_of_life, "risks": ["stable"]},
                     "1.0": {"end-of-life": end_of_life, "risks": ["stable"]},
-                    "1.0.1": {"end-of-life": end_of_life, "risks": ["stable"]},
+                    "1.0.1": {"end-of-life": end_of_life_patch, "risks": ["stable"]},
                 },
             },
         ],
