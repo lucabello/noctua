@@ -37,17 +37,14 @@ def ci(
 
         status_cell = []
         for workflow in workflows:
-            match workflow.status:
-                case "success":
-                    pretty_status = "[green]success[/green]"
-                case "failure":
-                    pretty_status = (
-                        f"[red]failure[/red] ([blue link={workflow.url}]link[/blue link])"
-                    )
-                case "cancelled":
-                    pretty_status = "[yellow]cancelled[/yellow]"
-                case _:
-                    pretty_status = f"[i]{workflow.status}[/i]"
+            if workflow.status == "success":
+                pretty_status = "[green]success[/green]"
+            elif workflow.status == "failure":
+                pretty_status = f"[red]failure[/red] ([blue link={workflow.url}]link[/blue link])"
+            elif workflow.status == "cancelled":
+                pretty_status = "[yellow]cancelled[/yellow]"
+            else:
+                pretty_status = f"[i]{workflow.status}[/i]"
             status_cell.append(f"{workflow.name}: {pretty_status}")
 
         table.add_row(repo_name, "\n".join(status_cell))

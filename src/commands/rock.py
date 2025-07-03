@@ -154,6 +154,9 @@ def manifest(
         ),
     ],
     base: Annotated[str, typer.Option(help="Base to append to the tags")] = "22.04",
+    risk_track: Annotated[
+        str, typer.Option("--risk", help="Risk track to append to the tags")
+    ] = "stable",
 ):
     """Generate the 'image.yaml' manifest for OCI Factory."""
     # Get the tags to apply to each version
@@ -178,7 +181,10 @@ def manifest(
 
     # Generate the 'image.yaml' manifest
     manifest = rockcraft.oci_factory_manifest(
-        repository=rock_repo, commit=commit_sha, versions_with_tags=selected_versions
+        repository=rock_repo,
+        commit=commit_sha,
+        versions_with_tags=selected_versions,
+        risk_track=risk_track,
     )
     console.print(manifest)
 

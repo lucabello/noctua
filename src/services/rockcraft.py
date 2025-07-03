@@ -112,7 +112,10 @@ def oci_factory_tags(rock_name: str) -> List[str]:
 
 
 def oci_factory_manifest(
-    repository: str, commit: str, versions_with_tags: Dict[str, List[str]]
+    repository: str,
+    commit: str,
+    versions_with_tags: Dict[str, List[str]],
+    risk_track: str = "stable",
 ) -> str:
     """Generate an OCI Factory manifest (i.e., the 'image.yaml' file).
 
@@ -124,6 +127,7 @@ def oci_factory_manifest(
         repository: Full name of the rock repo (e.g., 'canonical/prometheus-rock').
         commit: SHA of the commit (in the rock repo) to point at.
         versions_with_tags: Dict of {version: [tags]} to add to the manifest.
+        risk_track: Track that should be set in the OCI manifest.
 
     Returns:
         The generated 'image.yaml', formatted according to OCI Factory standards.
@@ -153,7 +157,7 @@ def oci_factory_manifest(
             is_tag_with_patch = len(tag.split("-")[0].split(".")) == 3
             upload_item["release"][tag] = {
                 "end-of-life": end_of_life_patch if is_tag_with_patch else end_of_life,
-                "risks": ["stable"],
+                "risks": [risk_track],
             }
         manifest["upload"].append(upload_item)
 

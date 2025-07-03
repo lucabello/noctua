@@ -645,7 +645,7 @@ def publish_charm_libraries(dry_run: bool = False):
             sh.charmcraft("publish-lib", library.full_name, format="json", _tty_out=False)
         )
         # Some versions of Charmcraft return a list, some return a dict
-        # Take the first item of the list, because publish-lib supports one library at a time anyway
+        # Take the first item of the list, because publish-lib supports one library at a time
         if isinstance(result, list):
             result = result[0]
 
