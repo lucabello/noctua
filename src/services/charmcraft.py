@@ -417,9 +417,11 @@ def upload(
     charm_resources = metadata().get("resources", {})  # machine charms have no resources
     uploaded_resources: List[CharmResource] = []
     for resource_name in charm_resources.keys():
-        upstream_source = charm_resources[resource_name][
+        upstream_source = charm_resources[resource_name].get(
             "upstream-source"
-        ]  # e.g., ubuntu/prometheus:2-22.04
+        )  # e.g., ubuntu/prometheus:2-22.04
+        if not upstream_source:
+            continue
         if dry_run:
             console.print(
                 f"[yellow](dry_run)[/yellow] charmcraft upload-resource "
