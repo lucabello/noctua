@@ -420,29 +420,39 @@ def upload(
         upstream_source = charm_resources[resource_name].get(
             "upstream-source"
         )  # e.g., ubuntu/prometheus:2-22.04
-        if not upstream_source:
-            continue
-        if dry_run:
-            console.print(
-                f"[yellow](dry_run)[/yellow] charmcraft upload-resource "
-                f"{charm_name} {resource_name} --image=docker://{upstream_source} "
-                "--format=json"
+        if upstream_source:
+            # `upload-resource` output: {"revision": <int>}
+            upload_result = json.loads(
+                sh.charmcraft(
+                    "upload-resource",
+                    charm_name,
+                    resource_name,
+                    image=f"docker://{upstream_source}",
+                    format="json",
+                    _tty_out=False,
+                )
             )
-            continue
-        # `upload-resource` output: {"revision": <int>}
-        upload_result = json.loads(
-            sh.charmcraft(
-                "upload-resource",
-                charm_name,
-                resource_name,
-                image=f"docker://{upstream_source}",
-                format="json",
-                _tty_out=False,
+            resource = CharmResource(
+                name=resource_name,
+                revision=upload_result["revision"],
+                upstream_source=upstream_source,
             )
-        )
-        resource = CharmResource(
-            name=resource_name, revision=upload_result["revision"], upstream_source=upstream_source
-        )
+        else:
+            # Get the latest resource-revision for the existing manually-uploaded resources
+            resource_revisions = json.loads(
+                sh.charmcraft(
+                    "resource-revisions",
+                    charm_name,
+                    resource_name,
+                    _tty_out=False,
+                )
+            )
+            resource = CharmResource(
+                name=resource_name,
+                # NOTE: Charmcraft returns revisions in order, with the last being the highest
+                revision=resource_revisions[-1]["revision"],
+            )
+
         uploaded_resources.append(resource)
         if not quiet:
             console.print(f"[b]{charm_name}[/b]: resource uploaded {resource}")
