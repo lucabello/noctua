@@ -444,6 +444,7 @@ def upload(
                     "resource-revisions",
                     charm_name,
                     resource_name,
+                    format="json",
                     _tty_out=False,
                 )
             )
