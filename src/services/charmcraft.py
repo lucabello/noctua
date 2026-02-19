@@ -389,7 +389,7 @@ def upload(
             errors = json.loads(e.stdout)["errors"]
         except (json.JSONDecodeError, KeyError):
             console.print(e.stderr)
-            raise
+            raise e from None
         else:
             if len(errors) != 1:
                 console.print(e.stderr)
