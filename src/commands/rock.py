@@ -3,7 +3,7 @@
 import logging
 import os
 import re
-from typing import Annotated, List, Optional
+from typing import Annotated, List, Literal, Optional
 
 import typer
 from rich.console import Console
@@ -157,6 +157,16 @@ def manifest(
     risk_track: Annotated[
         str, typer.Option("--risk", help="Risk track to append to the tags")
     ] = "stable",
+    support: Annotated[
+        Literal["major", "minor", "patch"],
+        typer.Option(
+            "--support",
+            help=(
+                "Tag support level to keep with future end-of-life; "
+                "major/minor/patch"
+            ),
+        ),
+    ] = "minor",
 ):
     """Generate the 'image.yaml' manifest for OCI Factory."""
     # Get the tags to apply to each version
@@ -185,6 +195,7 @@ def manifest(
         commit=commit_sha,
         versions_with_tags=selected_versions,
         risk_track=risk_track,
+        support=support,
     )
     console.print(manifest)
 

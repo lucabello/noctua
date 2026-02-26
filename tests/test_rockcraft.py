@@ -128,3 +128,36 @@ def test_oci_factory_manifest_with_risk_track(risk_track):
     assert len({x["commit"] for x in manifest["upload"]}) == 1  # pyright: ignore
 
     assert manifest == expected_manifest
+
+
+@pytest.mark.parametrize(
+    "support, expected_future_tags",
+    [
+        ("major", {"1"}),
+        ("minor", {"1", "1.0"}),
+        ("patch", {"1", "1.0", "1.0.1"}),
+    ],
+)
+def test_oci_factory_manifest_with_support(support: str, expected_future_tags: set[str]):
+    repository = "canonical/prometheus-rock"
+    commit = "abcdef123"
+    versions_with_tags = {"1.0.1": ["1", "1.0", "1.0.1"]}
+    end_of_life_date = datetime.now() + timedelta(days=365 / 4)
+    end_of_life = f"{end_of_life_date.strftime('%Y-%m-%d')}T00:00:00Z"
+    end_of_life_patch_date = datetime.now() - timedelta(days=1)
+    end_of_life_patch = f"{end_of_life_patch_date.strftime('%Y-%m-%d')}T00:00:00Z"
+
+    manifest: Dict = yaml.safe_load(
+        rockcraft.oci_factory_manifest(
+            repository,
+            commit,
+            versions_with_tags,
+            risk_track="stable",
+            support=support,
+        )
+    )
+    release = manifest["upload"][0]["release"]  # pyright: ignore
+
+    for tag in ["1", "1.0", "1.0.1"]:
+        expected_eol = end_of_life if tag in expected_future_tags else end_of_life_patch
+        assert release[tag]["end-of-life"] == expected_eol

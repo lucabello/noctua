@@ -4,7 +4,7 @@ import json
 import re
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Literal
 
 import requests
 import sh
@@ -116,6 +116,7 @@ def oci_factory_manifest(
     commit: str,
     versions_with_tags: Dict[str, List[str]],
     risk_track: str = "stable",
+    support: Literal["major", "minor", "patch"] = "minor",
 ) -> str:
     """Generate an OCI Factory manifest (i.e., the 'image.yaml' file).
 
@@ -128,6 +129,7 @@ def oci_factory_manifest(
         commit: SHA of the commit (in the rock repo) to point at.
         versions_with_tags: Dict of {version: [tags]} to add to the manifest.
         risk_track: Track that should be set in the OCI manifest.
+        support: Highest tag specificity to keep with future end-of-life.
 
     Returns:
         The generated 'image.yaml', formatted according to OCI Factory standards.
@@ -142,6 +144,7 @@ def oci_factory_manifest(
     end_of_life_patch_date = datetime.now() - timedelta(days=1)  # for patch releases
     end_of_life = f"{end_of_life_date.strftime('%Y-%m-%d')}T00:00:00Z"
     end_of_life_patch = f"{end_of_life_patch_date.strftime('%Y-%m-%d')}T00:00:00Z"
+    max_supported_tag_level = {"major": 1, "minor": 2, "patch": 3}[support]
 
     manifest = {}
     manifest["version"] = 1
@@ -153,10 +156,10 @@ def oci_factory_manifest(
         upload_item["directory"] = version
         upload_item["release"] = {}
         for tag in tags:
-            # for patch tags, we set end-of-life to be "yesterday"
-            is_tag_with_patch = len(tag.split("-")[0].split(".")) == 3
+            tag_level = len(tag.split("-")[0].split("."))
+            is_supported = tag_level <= max_supported_tag_level
             upload_item["release"][tag] = {
-                "end-of-life": end_of_life_patch if is_tag_with_patch else end_of_life,
+                "end-of-life": end_of_life if is_supported else end_of_life_patch,
                 "risks": [risk_track],
             }
         manifest["upload"].append(upload_item)
