@@ -3,7 +3,8 @@
 import logging
 import os
 import re
-from typing import Annotated, List, Literal, Optional
+from enum import Enum
+from typing import Annotated, List, Optional
 
 import typer
 from rich.console import Console
@@ -19,6 +20,14 @@ app = typer.Typer()
 
 class InputError(Exception):
     """Exception due to wrong user or file input."""
+
+
+class SupportLevel(str, Enum):
+    """Support levels for manifest tag end-of-life."""
+
+    major = "major"
+    minor = "minor"
+    patch = "patch"
 
 
 @app.command()
@@ -158,7 +167,7 @@ def manifest(
         str, typer.Option("--risk", help="Risk track to append to the tags")
     ] = "stable",
     support: Annotated[
-        Literal["major", "minor", "patch"],
+        SupportLevel,
         typer.Option(
             "--support",
             help=(
@@ -166,7 +175,7 @@ def manifest(
                 "major/minor/patch"
             ),
         ),
-    ] = "minor",
+    ] = SupportLevel.minor,
 ):
     """Generate the 'image.yaml' manifest for OCI Factory."""
     # Get the tags to apply to each version
@@ -195,7 +204,7 @@ def manifest(
         commit=commit_sha,
         versions_with_tags=selected_versions,
         risk_track=risk_track,
-        support=support,
+        support=support.value,
     )
     console.print(manifest)
 
