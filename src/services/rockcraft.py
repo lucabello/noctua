@@ -117,6 +117,7 @@ def oci_factory_manifest(
     versions_with_tags: Dict[str, List[str]],
     risk_track: str = "stable",
     support: Literal["major", "minor", "patch"] = "minor",
+    eol_days: int = 91,
 ) -> str:
     """Generate an OCI Factory manifest (i.e., the 'image.yaml' file).
 
@@ -130,6 +131,7 @@ def oci_factory_manifest(
         versions_with_tags: Dict of {version: [tags]} to add to the manifest.
         risk_track: Track that should be set in the OCI manifest.
         support: Highest tag specificity to keep with future end-of-life.
+        eol_days: Number of days until end-of-life for supported tags (default: 91, ~3 months).
 
     Returns:
         The generated 'image.yaml', formatted according to OCI Factory standards.
@@ -140,7 +142,7 @@ def oci_factory_manifest(
             """Force indent when executing dump."""
             return super().increase_indent(flow, False)
 
-    end_of_life_date = datetime.now() + timedelta(days=365 / 4)  # EOL is 3 months by default
+    end_of_life_date = datetime.now() + timedelta(days=eol_days)
     end_of_life_patch_date = datetime.now() - timedelta(days=1)  # for patch releases
     end_of_life = f"{end_of_life_date.strftime('%Y-%m-%d')}T00:00:00Z"
     end_of_life_patch = f"{end_of_life_patch_date.strftime('%Y-%m-%d')}T00:00:00Z"

@@ -176,6 +176,13 @@ def manifest(
             ),
         ),
     ] = SupportLevel.minor,
+    eol_days: Annotated[
+        int,
+        typer.Option(
+            "--eol-days",
+            help="Number of days until end-of-life for supported tags (default: 91, ~3 months)",
+        ),
+    ] = 91,
 ):
     """Generate the 'image.yaml' manifest for OCI Factory."""
     # Get the tags to apply to each version
@@ -205,6 +212,7 @@ def manifest(
         versions_with_tags=selected_versions,
         risk_track=risk_track,
         support=support.value,
+        eol_days=eol_days,
     )
     console.print(manifest)
 
