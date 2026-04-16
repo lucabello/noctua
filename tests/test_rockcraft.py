@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Dict, List
+from typing import Dict, List, Literal
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -138,7 +138,9 @@ def test_oci_factory_manifest_with_risk_track(risk_track):
         ("patch", {"1", "1.0", "1.0.1"}),
     ],
 )
-def test_oci_factory_manifest_with_support(support: str, expected_future_tags: set[str]):
+def test_oci_factory_manifest_with_support(
+    support: Literal["major", "minor", "patch"], expected_future_tags: set[str]
+):
     repository = "canonical/prometheus-rock"
     commit = "abcdef123"
     versions_with_tags = {"1.0.1": ["1", "1.0", "1.0.1"]}
