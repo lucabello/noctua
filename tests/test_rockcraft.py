@@ -163,13 +163,19 @@ def test_oci_factory_manifest_with_support(support: str, expected_future_tags: s
         assert release[tag]["end-of-life"] == expected_eol
 
 
-@pytest.mark.parametrize("eol_days", [30, 180, 365])
-def test_oci_factory_manifest_with_custom_eol(eol_days: int):
+@pytest.mark.parametrize(
+    "eol_date",
+    [
+        datetime(2027, 1, 1),
+        datetime(2028, 6, 15),
+        datetime(2030, 12, 31),
+    ],
+)
+def test_oci_factory_manifest_with_custom_eol(eol_date: datetime):
     repository = "canonical/prometheus-rock"
     commit = "abcdef123"
     versions_with_tags = {"1.0.1": ["1", "1.0", "1.0.1"]}
-    end_of_life_date = datetime.now() + timedelta(days=eol_days)
-    end_of_life = f"{end_of_life_date.strftime('%Y-%m-%d')}T00:00:00Z"
+    end_of_life = f"{eol_date.strftime('%Y-%m-%d')}T00:00:00Z"
     end_of_life_patch_date = datetime.now() - timedelta(days=1)
     end_of_life_patch = f"{end_of_life_patch_date.strftime('%Y-%m-%d')}T00:00:00Z"
 
@@ -180,7 +186,7 @@ def test_oci_factory_manifest_with_custom_eol(eol_days: int):
             versions_with_tags,
             risk_track="stable",
             support="minor",
-            eol_days=eol_days,
+            eol=eol_date,
         )
     )
     release = manifest["upload"][0]["release"]  # pyright: ignore

@@ -176,13 +176,14 @@ def manifest(
             ),
         ),
     ] = SupportLevel.minor,
-    eol_days: Annotated[
-        int,
+    eol: Annotated[
+        Optional[str],
         typer.Option(
-            "--eol-days",
-            help="Number of days until end-of-life for supported tags (default: 91, ~3 months)",
+            "--eol",
+            help="Custom end-of-life date for supported tags (format: YYYY-MM-DD)",
+            show_default=False,
         ),
-    ] = 91,
+    ] = None,
 ):
     """Generate the 'image.yaml' manifest for OCI Factory."""
     # Get the tags to apply to each version
@@ -205,6 +206,18 @@ def manifest(
                 f"Existing versions: {list(versions_with_tags.keys())}"
             )
 
+    # Parse the custom EOL date if provided
+    from datetime import datetime
+
+    eol_date = None
+    if eol:
+        try:
+            eol_date = datetime.strptime(eol, "%Y-%m-%d")
+        except ValueError:
+            raise InputError(
+                f"Invalid date format '{eol}'; please use YYYY-MM-DD (e.g., '2027-01-01')"
+            )
+
     # Generate the 'image.yaml' manifest
     manifest = rockcraft.oci_factory_manifest(
         repository=rock_repo,
@@ -212,7 +225,7 @@ def manifest(
         versions_with_tags=selected_versions,
         risk_track=risk_track,
         support=support.value,
-        eol_days=eol_days,
+        eol=eol_date,
     )
     console.print(manifest)
 
