@@ -170,10 +170,7 @@ def manifest(
         SupportLevel,
         typer.Option(
             "--support",
-            help=(
-                "Tag support level to keep with future end-of-life; "
-                "major/minor/patch"
-            ),
+            help=("Tag support level to keep with future end-of-life; major/minor/patch"),
         ),
     ] = SupportLevel.minor,
     eol: Annotated[
