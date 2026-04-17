@@ -143,9 +143,7 @@ def oci_factory_manifest(
             return super().increase_indent(flow, False)
 
     end_of_life_date = eol if eol else datetime.now() + timedelta(days=91)
-    end_of_life_patch_date = datetime.now() - timedelta(days=1)  # for patch releases
     end_of_life = f"{end_of_life_date.strftime('%Y-%m-%d')}T00:00:00Z"
-    end_of_life_patch = f"{end_of_life_patch_date.strftime('%Y-%m-%d')}T00:00:00Z"
     max_supported_tag_level = {"major": 1, "minor": 2, "patch": 3}[support]
 
     manifest = {}
@@ -159,11 +157,14 @@ def oci_factory_manifest(
         upload_item["release"] = {}
         for tag in tags:
             tag_level = len(tag.split("-")[0].split("."))
-            is_supported = tag_level <= max_supported_tag_level
+            if tag_level > max_supported_tag_level:
+                continue
             upload_item["release"][tag] = {
-                "end-of-life": end_of_life if is_supported else end_of_life_patch,
+                "end-of-life": end_of_life,
                 "risks": [risk_track],
             }
+        if not upload_item["release"]:
+            continue
         manifest["upload"].append(upload_item)
 
     return yaml.dump(

@@ -55,18 +55,12 @@ def test_oci_factory_manifest():
     versions_with_tags = {"1.0.0": ["1.0.0"], "1.0.1": ["1", "1.0", "1.0.1"]}
     end_of_life_date = datetime.now() + timedelta(days=91)
     end_of_life = f"{end_of_life_date.strftime('%Y-%m-%d')}T00:00:00Z"
-    end_of_life_patch_date = datetime.now() - timedelta(days=1)
-    end_of_life_patch = f"{end_of_life_patch_date.strftime('%Y-%m-%d')}T00:00:00Z"
 
+    # Default support is "minor", so patch tags are omitted entirely.
+    # Version "1.0.0" only has a patch-level tag, so it's skipped.
     expected_manifest = {
         "version": 2,
         "upload": [
-            {
-                "source": "canonical/prometheus-rock",
-                "commit": "abcdef123",
-                "directory": "1.0.0",
-                "release": {"1.0.0": {"end-of-life": end_of_life_patch, "risks": ["stable"]}},
-            },
             {
                 "source": "canonical/prometheus-rock",
                 "commit": "abcdef123",
@@ -74,7 +68,6 @@ def test_oci_factory_manifest():
                 "release": {
                     "1": {"end-of-life": end_of_life, "risks": ["stable"]},
                     "1.0": {"end-of-life": end_of_life, "risks": ["stable"]},
-                    "1.0.1": {"end-of-life": end_of_life_patch, "risks": ["stable"]},
                 },
             },
         ],
@@ -96,18 +89,11 @@ def test_oci_factory_manifest_with_risk_track(risk_track):
     versions_with_tags = {"1.0.0": ["1.0.0"], "1.0.1": ["1", "1.0", "1.0.1"]}
     end_of_life_date = datetime.now() + timedelta(days=91)
     end_of_life = f"{end_of_life_date.strftime('%Y-%m-%d')}T00:00:00Z"
-    end_of_life_patch_date = datetime.now() - timedelta(days=1)
-    end_of_life_patch = f"{end_of_life_patch_date.strftime('%Y-%m-%d')}T00:00:00Z"
 
+    # Default support is "minor", so patch tags are omitted.
     expected_manifest = {
         "version": 2,
         "upload": [
-            {
-                "source": "canonical/prometheus-rock",
-                "commit": "abcdef123",
-                "directory": "1.0.0",
-                "release": {"1.0.0": {"end-of-life": end_of_life_patch, "risks": [risk_track]}},
-            },
             {
                 "source": "canonical/prometheus-rock",
                 "commit": "abcdef123",
@@ -115,7 +101,6 @@ def test_oci_factory_manifest_with_risk_track(risk_track):
                 "release": {
                     "1": {"end-of-life": end_of_life, "risks": [risk_track]},
                     "1.0": {"end-of-life": end_of_life, "risks": [risk_track]},
-                    "1.0.1": {"end-of-life": end_of_life_patch, "risks": [risk_track]},
                 },
             },
         ],
@@ -131,7 +116,7 @@ def test_oci_factory_manifest_with_risk_track(risk_track):
 
 
 @pytest.mark.parametrize(
-    "support, expected_future_tags",
+    "support, expected_tags",
     [
         ("major", {"1"}),
         ("minor", {"1", "1.0"}),
@@ -139,15 +124,13 @@ def test_oci_factory_manifest_with_risk_track(risk_track):
     ],
 )
 def test_oci_factory_manifest_with_support(
-    support: Literal["major", "minor", "patch"], expected_future_tags: set[str]
+    support: Literal["major", "minor", "patch"], expected_tags: set[str]
 ):
     repository = "canonical/prometheus-rock"
     commit = "abcdef123"
     versions_with_tags = {"1.0.1": ["1", "1.0", "1.0.1"]}
     end_of_life_date = datetime.now() + timedelta(days=91)
     end_of_life = f"{end_of_life_date.strftime('%Y-%m-%d')}T00:00:00Z"
-    end_of_life_patch_date = datetime.now() - timedelta(days=1)
-    end_of_life_patch = f"{end_of_life_patch_date.strftime('%Y-%m-%d')}T00:00:00Z"
 
     manifest: Dict = yaml.safe_load(
         rockcraft.oci_factory_manifest(
@@ -160,9 +143,10 @@ def test_oci_factory_manifest_with_support(
     )
     release = manifest["upload"][0]["release"]  # pyright: ignore
 
-    for tag in ["1", "1.0", "1.0.1"]:
-        expected_eol = end_of_life if tag in expected_future_tags else end_of_life_patch
-        assert release[tag]["end-of-life"] == expected_eol
+    # Only supported tags should be present, each with the standard EOL
+    assert set(release.keys()) == expected_tags
+    for tag in expected_tags:
+        assert release[tag]["end-of-life"] == end_of_life
 
 
 @pytest.mark.parametrize(
@@ -178,8 +162,6 @@ def test_oci_factory_manifest_with_custom_eol(eol_date: datetime):
     commit = "abcdef123"
     versions_with_tags = {"1.0.1": ["1", "1.0", "1.0.1"]}
     end_of_life = f"{eol_date.strftime('%Y-%m-%d')}T00:00:00Z"
-    end_of_life_patch_date = datetime.now() - timedelta(days=1)
-    end_of_life_patch = f"{end_of_life_patch_date.strftime('%Y-%m-%d')}T00:00:00Z"
 
     manifest: Dict = yaml.safe_load(
         rockcraft.oci_factory_manifest(
@@ -196,5 +178,5 @@ def test_oci_factory_manifest_with_custom_eol(eol_date: datetime):
     # "1" and "1.0" are supported (major/minor), so they get the custom EOL
     assert release["1"]["end-of-life"] == end_of_life
     assert release["1.0"]["end-of-life"] == end_of_life
-    # "1.0.1" is a patch tag, unsupported at minor level, so it gets yesterday's date
-    assert release["1.0.1"]["end-of-life"] == end_of_life_patch
+    # "1.0.1" is a patch tag, unsupported at minor level, so it's omitted entirely
+    assert "1.0.1" not in release
