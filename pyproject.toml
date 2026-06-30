@@ -1,6 +1,6 @@
 [project]
 name = "noctua"
-version = "0.1"
+version = "0.2"
 description = "Helper tool for Canonical's Observability CI"
 authors = [
   { name = "Luca Bello", email = "lusgabello@gmail.com"}

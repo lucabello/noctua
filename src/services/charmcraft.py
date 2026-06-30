@@ -32,6 +32,78 @@ class CharmhubError(Exception):
     """Triggered by a failure in a Charmhub interaction."""
 
 
+def _print_charmcraft_error(stderr: str, console: Console) -> None:
+    """Print a charmcraft error with the log file contents if available.
+
+    Extracts the log file path from stderr, displays a clear error summary,
+    and shows the full log contents for debugging.
+
+    Args:
+        stderr: The stderr output from the failed charmcraft command.
+        console: The rich console to print to.
+    """
+    stderr_str = stderr.decode() if isinstance(stderr, bytes) else stderr
+
+    # Extract log file path from stderr
+    log_match = re.search(r"Full execution log: '([^']+)'", stderr_str)
+
+    # Print a clear error header
+    console.print("\n[bold red]Charmcraft command failed[/bold red]")
+
+    # Extract the key error message (last meaningful lines before the log path)
+    lines = stderr_str.strip().split("\n")
+    error_lines = []
+    for line in lines:
+        # Skip repeated "Status checked" messages
+        if "Status checked:" in line:
+            continue
+        # Stop at the log file line
+        if "Full execution log:" in line:
+            break
+        error_lines.append(line)
+
+    # Show the last few meaningful lines as the summary
+    if error_lines:
+        summary_lines = error_lines[-5:] if len(error_lines) > 5 else error_lines
+        console.print("[yellow]Error summary:[/yellow]")
+        for line in summary_lines:
+            if line.strip():
+                console.print(f"  {line}")
+
+    if log_match:
+        log_path = log_match.group(1)
+        console.print(f"\n[yellow]Full log file:[/yellow] {log_path}")
+
+        # Try to read and display the log file contents
+        try:
+            log_file = Path(log_path)
+            if log_file.exists():
+                log_content = log_file.read_text()
+                # Filter out noisy credential retrieval lines and HTTP headers
+                filtered_lines = []
+                for line in log_content.split("\n"):
+                    # Skip verbose/repetitive lines
+                    if "Retrieving credentials for" in line:
+                        continue
+                    if "HTTP 'GET'" in line or "HTTP 'POST'" in line:
+                        continue
+                    if "Status checked:" in line:
+                        continue
+                    filtered_lines.append(line)
+
+                console.print("\n[yellow]Filtered log contents:[/yellow]")
+                console.print("-" * 60)
+                for line in filtered_lines:
+                    console.print(line)
+                console.print("-" * 60)
+        except Exception as read_error:
+            console.print(f"[red]Could not read log file: {read_error}[/red]")
+    else:
+        # No log file found, print full stderr
+        console.print("\n[yellow]Full stderr output:[/yellow]")
+        console.print(stderr_str)
+
+
 @dataclass
 class CharmLibrary:
     """Mapping of a Charm library, based on Charmcraft's `list-lib` response object."""
@@ -388,22 +460,22 @@ def upload(
         try:
             errors = json.loads(e.stdout)["errors"]
         except (json.JSONDecodeError, KeyError):
-            console.print(e.stderr)
+            _print_charmcraft_error(e.stderr, console)
             raise e from None
         else:
             if len(errors) != 1:
-                console.print(e.stderr)
+                _print_charmcraft_error(e.stderr, console)
                 raise
             error = errors[0]
             if error.get("code") != "review-error":
-                console.print(e.stderr)
+                _print_charmcraft_error(e.stderr, console)
                 raise
             match = re.fullmatch(
                 r".*?Revision of the existing package is: (?P<revision>[0-9]+)",
                 error.get("message", ""),
             )
             if not match:
-                console.print(e.stderr)
+                _print_charmcraft_error(e.stderr, console)
                 raise
             revision = int(match.group("revision"))
             if not quiet:
