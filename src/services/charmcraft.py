@@ -70,6 +70,10 @@ def _print_charmcraft_error(stderr: str, console: Console) -> None:
             if line.strip():
                 console.print(f"  {line}")
 
+    # Always print full stderr for complete context
+    console.print("\n[yellow]Full stderr:[/yellow]")
+    console.print(stderr_str)
+
     if log_match:
         log_path = log_match.group(1)
         console.print(f"\n[yellow]Full log file:[/yellow] {log_path}")
@@ -79,29 +83,12 @@ def _print_charmcraft_error(stderr: str, console: Console) -> None:
             log_file = Path(log_path)
             if log_file.exists():
                 log_content = log_file.read_text()
-                # Filter out noisy credential retrieval lines and HTTP headers
-                filtered_lines = []
-                for line in log_content.split("\n"):
-                    # Skip verbose/repetitive lines
-                    if "Retrieving credentials for" in line:
-                        continue
-                    if "HTTP 'GET'" in line or "HTTP 'POST'" in line:
-                        continue
-                    if "Status checked:" in line:
-                        continue
-                    filtered_lines.append(line)
-
-                console.print("\n[yellow]Filtered log contents:[/yellow]")
+                console.print("\n[yellow]Log file contents:[/yellow]")
                 console.print("-" * 60)
-                for line in filtered_lines:
-                    console.print(line)
+                console.print(log_content)
                 console.print("-" * 60)
         except Exception as read_error:
             console.print(f"[red]Could not read log file: {read_error}[/red]")
-    else:
-        # No log file found, print full stderr
-        console.print("\n[yellow]Full stderr output:[/yellow]")
-        console.print(stderr_str)
 
 
 @dataclass
