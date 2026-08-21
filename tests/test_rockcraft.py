@@ -30,6 +30,49 @@ def test_local_tags(folders: List[str], expected: Dict[str, List[str]]):
         rockcraft.local_tags(["no-version", "here"])
 
 
+def test_local_tags_with_major_minor_folder(tmp_path):
+    """A 'major.minor' folder should resolve its real version from rockcraft.yaml."""
+    folder = tmp_path / "2.2"
+    folder.mkdir()
+    (folder / "rockcraft.yaml").write_text(yaml.dump({"name": "pyroscope", "version": "2.2.1"}))
+
+    resolved = rockcraft.resolve_version_folders(["2.2"], base_path=tmp_path)
+    assert resolved == {"2.2.1": "2.2"}
+
+    tags = rockcraft.local_tags(["2.2"], base_path=tmp_path)
+    assert tags == {"2.2.1": ["2", "2.2", "2.2.1"]}
+
+
+def test_local_tags_mixed_layout(tmp_path):
+    """Old-style full-semver folders and new-style 'major.minor' folders can coexist."""
+    old_folder = tmp_path / "1.18.0"
+    old_folder.mkdir()
+
+    new_folder = tmp_path / "2.2"
+    new_folder.mkdir()
+    (new_folder / "rockcraft.yaml").write_text(
+        yaml.dump({"name": "pyroscope", "version": "2.2.1"})
+    )
+
+    resolved = rockcraft.resolve_version_folders(["1.18.0", "2.2"], base_path=tmp_path)
+    assert resolved == {"1.18.0": "1.18.0", "2.2.1": "2.2"}
+
+    tags = rockcraft.local_tags(["1.18.0", "2.2"], base_path=tmp_path)
+    assert tags == {
+        "1.18.0": ["1", "1.18", "1.18.0"],
+        "2.2.1": ["2", "2.2", "2.2.1"],
+    }
+
+
+def test_local_tags_folder_without_rockcraft_yaml_falls_back_to_folder_name(tmp_path):
+    """A folder with no rockcraft.yaml should fall back to using its name as the version."""
+    folder = tmp_path / "2.2"
+    folder.mkdir()
+
+    resolved = rockcraft.resolve_version_folders(["2.2"], base_path=tmp_path)
+    assert resolved == {"2.2": "2.2"}
+
+
 def test_oci_factory_tags():
     with patch("requests.get", MagicMock()) as get_mock:
         get_mock.return_value.status_code = 404
@@ -80,6 +123,24 @@ def test_oci_factory_manifest():
     assert len({x["commit"] for x in manifest["upload"]}) == 1  # pyright: ignore
 
     assert manifest == expected_manifest
+
+
+def test_oci_factory_manifest_with_version_folders():
+    """When a version's folder differs from its version, 'directory' should use the folder."""
+    repository = "canonical/pyroscope-rock"
+    commit = "abcdef123"
+    versions_with_tags = {"2.2.1": ["2", "2.2", "2.2.1"]}
+    version_folders = {"2.2.1": "2.2"}
+
+    manifest: Dict = yaml.safe_load(
+        rockcraft.oci_factory_manifest(
+            repository,
+            commit,
+            versions_with_tags,
+            version_folders=version_folders,
+        )
+    )
+    assert manifest["upload"][0]["directory"] == "2.2"  # pyright: ignore
 
 
 @pytest.mark.parametrize("risk_track", ["stable", "edge"])

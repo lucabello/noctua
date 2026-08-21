@@ -184,6 +184,7 @@ def manifest(
 ):
     """Generate the 'image.yaml' manifest for OCI Factory."""
     # Get the tags to apply to each version
+    version_folders = rockcraft.resolve_version_folders(os.listdir())
     versions_with_tags = rockcraft.local_tags(os.listdir())
     selected_versions = {k: v for k, v in versions_with_tags.items() if k in version_list}
     # Append the -base suffix to the tag
@@ -223,6 +224,7 @@ def manifest(
         risk_track=risk_track,
         support=support.value,
         eol=eol_date,
+        version_folders=version_folders,
     )
     console.print(manifest)
 

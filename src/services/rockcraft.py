@@ -22,32 +22,71 @@ class GitHubError(Exception):
     """Trigger by failed interactions with GitHub."""
 
 
-def local_tags(version_folders: List[str]) -> Dict[str, List[str]]:
+def resolve_version_folders(
+    version_folders: List[str], base_path: str | Path = "."
+) -> Dict[str, str]:
+    """Resolve the real rock version for each version-named folder.
+
+    Rock repos may either use folders named after the full semantic version
+    (e.g. '2.8.4'), or 'major.minor' folders (e.g. '2.8') that track the
+    latest patch internally, with the concrete version declared in the
+    'version' field of that folder's 'rockcraft.yaml'. This function
+    resolves the real version for both layouts.
+
+    Args:
+        version_folders: List of folders named after semantic versions.
+        base_path: Path where the version folders live (defaults to CWD).
+
+    Returns:
+        A dictionary with structure {real_version: folder_name}.
+    """
+    # Folder names should be major.minor or major.minor.patch
+    folder_regex = re.compile(r"^\d+\.\d+(\.\d+)?$")
+    folders = list(filter(lambda x: folder_regex.match(x), version_folders))
+
+    if not folders:
+        raise InputError("There are no versioned folders in the current working directory.")
+
+    resolved = {}
+    for folder in folders:
+        rockcraft_yaml = Path(base_path) / folder / "rockcraft.yaml"
+        version_str = folder
+        if rockcraft_yaml.exists():
+            data = yaml.safe_load(rockcraft_yaml.read_text())
+            if data and data.get("version"):
+                version_str = str(data["version"])
+        resolved[version_str] = folder
+
+    return resolved
+
+
+def local_tags(version_folders: List[str], base_path: str | Path = ".") -> Dict[str, List[str]]:
     """Compute the tags that would be assigned to each rock version.
 
     This assumes the working directory is the root of the rock repo,
     and that it contains folders with version names. Folders that are not
-    named after semantic versions are be ignored.
+    named after semantic versions are be ignored. A folder may either be
+    named after the full version it contains (e.g. '2.8.4') or after a
+    'major.minor' line (e.g. '2.8'), in which case the real version is read
+    from the 'version' field of its 'rockcraft.yaml'.
 
     Args:
         version_folders: List of folders named after semantic versions.
+        base_path: Path where the version folders live (defaults to CWD).
 
     Returns:
         A dictionary with structure {version: list(tags)}.
     """
-    # Versions should be major.minor or major.minor.patch
-    version_regex = re.compile(r"^\d+\.\d+(\.\d+)?$")
-    versions = list(filter(lambda x: version_regex.match(x), version_folders))
-
-    if not versions:
-        raise InputError("There are no versioned folders in the current working directory.")
+    resolved = resolve_version_folders(version_folders, base_path)
+    versions = list(resolved.keys())
 
     # Sort the versions semantically
     versions.sort(key=Version)
     tags = {}
     for version_str in versions:
-        version_search = re.search(version_regex, version_str)
-        has_patch = True if version_search and version_search.group(1) else False
+        # A version only gets a patch tag if it came from a fully
+        # specified folder name or its own version string has a patch.
+        has_patch = len(version_str.split(".")) > 2
 
         version = Version(version_str)
         major_tag = f"{version.major}"
@@ -118,6 +157,7 @@ def oci_factory_manifest(
     risk_track: str = "stable",
     support: Literal["major", "minor", "patch"] = "minor",
     eol: Optional[datetime] = None,
+    version_folders: Optional[Dict[str, str]] = None,
 ) -> str:
     """Generate an OCI Factory manifest (i.e., the 'image.yaml' file).
 
@@ -132,6 +172,10 @@ def oci_factory_manifest(
         risk_track: Track that should be set in the OCI manifest.
         support: Highest tag specificity to keep with future end-of-life.
         eol: Custom end-of-life date for supported tags. Defaults to ~3 months from now.
+        version_folders: Dict of {version: folder} to resolve the folder that OCI
+            Factory should check out for each version. Useful for rock repos using
+            'major.minor' folders that don't match the actual release version.
+            Defaults to using the version itself as the folder name.
 
     Returns:
         The generated 'image.yaml', formatted according to OCI Factory standards.
@@ -145,6 +189,7 @@ def oci_factory_manifest(
     end_of_life_date = eol if eol else datetime.now() + timedelta(days=91)
     end_of_life = f"{end_of_life_date.strftime('%Y-%m-%d')}T00:00:00Z"
     max_supported_tag_level = {"major": 1, "minor": 2, "patch": 3}[support]
+    version_folders = version_folders or {}
 
     manifest = {}
     manifest["version"] = 2
@@ -153,7 +198,7 @@ def oci_factory_manifest(
         upload_item = {}
         upload_item["source"] = repository
         upload_item["commit"] = commit
-        upload_item["directory"] = version
+        upload_item["directory"] = version_folders.get(version, version)
         upload_item["release"] = {}
         for tag in tags:
             tag_level = len(tag.split("-")[0].split("."))
