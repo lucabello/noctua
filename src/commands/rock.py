@@ -188,7 +188,7 @@ def manifest(
             help="Custom base directory for the rocks",
             show_default=False,
         ),
-    ] = ".",
+    ] = "",
 ):
     """Generate the 'image.yaml' manifest for OCI Factory."""
     # Get the tags to apply to each version

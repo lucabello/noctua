@@ -159,7 +159,7 @@ def oci_factory_manifest(
     support: Literal["major", "minor", "patch"] = "minor",
     eol: Optional[datetime] = None,
     version_folders: Optional[Dict[str, str]] = None,
-    directory: str = ".",
+    directory: str = "",
 ) -> str:
     """Generate an OCI Factory manifest (i.e., the 'image.yaml' file).
 
