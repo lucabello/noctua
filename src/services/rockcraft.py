@@ -178,6 +178,8 @@ def oci_factory_manifest(
             Factory should check out for each version. Useful for rock repos using
             'major.minor' folders that don't match the actual release version.
             Defaults to using the version itself as the folder name.
+        directory: Custom base directory to prepend to each version's folder path.
+            Defaults to no prefix.
 
     Returns:
         The generated 'image.yaml', formatted according to OCI Factory standards.
