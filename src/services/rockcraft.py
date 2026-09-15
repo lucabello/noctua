@@ -1,6 +1,7 @@
 """Wraps and extend `rockcraft` commands."""
 
 import json
+import os
 import re
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -158,6 +159,7 @@ def oci_factory_manifest(
     support: Literal["major", "minor", "patch"] = "minor",
     eol: Optional[datetime] = None,
     version_folders: Optional[Dict[str, str]] = None,
+    directory: str = "",
 ) -> str:
     """Generate an OCI Factory manifest (i.e., the 'image.yaml' file).
 
@@ -176,6 +178,8 @@ def oci_factory_manifest(
             Factory should check out for each version. Useful for rock repos using
             'major.minor' folders that don't match the actual release version.
             Defaults to using the version itself as the folder name.
+        directory: Custom base directory to prepend to each version's folder path.
+            Defaults to no prefix.
 
     Returns:
         The generated 'image.yaml', formatted according to OCI Factory standards.
@@ -198,7 +202,7 @@ def oci_factory_manifest(
         upload_item = {}
         upload_item["source"] = repository
         upload_item["commit"] = commit
-        upload_item["directory"] = version_folders.get(version, version)
+        upload_item["directory"] = os.path.join(directory, version_folders.get(version, version))
         upload_item["release"] = {}
         for tag in tags:
             tag_level = len(tag.split("-")[0].split("."))

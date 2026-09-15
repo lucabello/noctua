@@ -181,6 +181,14 @@ def manifest(
             show_default=False,
         ),
     ] = None,
+    directory: Annotated[
+        str,
+        typer.Option(
+            "--directory",
+            help="Custom base directory for the rocks",
+            show_default=False,
+        ),
+    ] = "",
 ):
     """Generate the 'image.yaml' manifest for OCI Factory."""
     # Get the tags to apply to each version
@@ -225,6 +233,7 @@ def manifest(
         support=support.value,
         eol=eol_date,
         version_folders=version_folders,
+        directory=directory,
     )
     console.print(manifest)
 
